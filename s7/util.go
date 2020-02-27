@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	gos7 "github.com/robinson/gos7"
+	pb "github.com/thinkontrolsy/goplc/s7/proto"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
 )
@@ -21,7 +22,7 @@ type S7TagAddress struct {
 	Start    int
 	Bit      uint
 	Amount   int
-	RawTag   *Tag
+	RawTag   *pb.Tag
 }
 
 func (t S7TagAddress) String() string {
@@ -42,7 +43,7 @@ func (t S7AGPointer) String() string {
 
 func (t *S7AGPointer) HasBoolTag() bool {
 	for _, tag := range t.Tags {
-		if tag.RawTag.Dt == DataType_BOOL {
+		if tag.RawTag.Dt == pb.DataType_BOOL {
 			return true
 		}
 	}
@@ -54,23 +55,23 @@ func (ag *S7AGPointer) FillBuffer() {
 	for _, item := range ag.Tags {
 		tag := item.RawTag
 		switch tag.Dt {
-		case DataType_BOOL:
+		case pb.DataType_BOOL:
 			{
 				v := tag.GetValueBool()
 				b := helper.SetBoolAt(ag.Buffer[item.Start-ag.Start], item.Bit, v)
 				ag.Buffer[item.Start-ag.Start] = b
 			}
-		case DataType_DINT:
+		case pb.DataType_DINT:
 			{
 				v := tag.GetValueInt()
 				helper.SetValueAt(ag.Buffer, item.Start-ag.Start, v)
 			}
-		case DataType_INT:
+		case pb.DataType_INT:
 			{
 				v := int16(tag.GetValueInt())
 				helper.SetValueAt(ag.Buffer, item.Start-ag.Start, v)
 			}
-		case DataType_REAL:
+		case pb.DataType_REAL:
 			{
 				v := tag.GetValueFloat()
 				helper.SetValueAt(ag.Buffer, item.Start-ag.Start, v)
@@ -84,33 +85,33 @@ func (ag *S7AGPointer) ReadBuffer() {
 	for _, item := range ag.Tags {
 		tag := item.RawTag
 		switch tag.Dt {
-		case DataType_BOOL:
+		case pb.DataType_BOOL:
 			{
-				tag.Value = &Tag_ValueBool{ValueBool: helper.GetBoolAt(ag.Buffer[item.Start-ag.Start], item.Bit)}
+				tag.Value = &pb.Tag_ValueBool{ValueBool: helper.GetBoolAt(ag.Buffer[item.Start-ag.Start], item.Bit)}
 			}
-		case DataType_DINT:
+		case pb.DataType_DINT:
 			{
 				var r int32
 				helper.GetValueAt(ag.Buffer, item.Start-ag.Start, &r)
-				tag.Value = &Tag_ValueInt{ValueInt: r}
+				tag.Value = &pb.Tag_ValueInt{ValueInt: r}
 			}
-		case DataType_INT:
+		case pb.DataType_INT:
 			{
 				var r int16
 				helper.GetValueAt(ag.Buffer, item.Start-ag.Start, &r)
-				tag.Value = &Tag_ValueInt{ValueInt: int32(r)}
+				tag.Value = &pb.Tag_ValueInt{ValueInt: int32(r)}
 			}
-		case DataType_REAL:
+		case pb.DataType_REAL:
 			{
 				var r float32
 				helper.GetValueAt(ag.Buffer, item.Start-ag.Start, &r)
-				tag.Value = &Tag_ValueFloat{ValueFloat: r}
+				tag.Value = &pb.Tag_ValueFloat{ValueFloat: r}
 			}
 		}
 	}
 }
 
-func tagsConvert(tags []*Tag) ([]*S7TagAddress, error) {
+func tagsConvert(tags []*pb.Tag) ([]*S7TagAddress, error) {
 	addReg, _ := regexp.Compile(AddressRegStr)
 	var items []*S7TagAddress
 	for _, tag := range tags {

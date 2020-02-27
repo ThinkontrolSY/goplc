@@ -4,14 +4,16 @@ import (
 	"context"
 	"time"
 
+	pb "github.com/thinkontrolsy/goplc/s7/proto"
+
 	gos7 "github.com/robinson/gos7"
 )
 
 type PlcServer struct {
-	UnimplementedPlcRWServer
+	pb.UnimplementedPlcRWServer
 }
 
-func (s *PlcServer) GetCpuInfo(ctx context.Context, req *Plc) (*S7CpuInfo, error) {
+func (s *PlcServer) GetCpuInfo(ctx context.Context, req *pb.Plc) (*pb.S7CpuInfo, error) {
 	handler := gos7.NewTCPClientHandler(req.GetHost(), int(req.GetRack()), int(req.GetSlot()))
 	handler.Timeout = 5 * time.Second
 	handler.IdleTimeout = 5 * time.Second
@@ -20,7 +22,7 @@ func (s *PlcServer) GetCpuInfo(ctx context.Context, req *Plc) (*S7CpuInfo, error
 		client := gos7.NewClient(handler)
 		info, err := client.GetCPUInfo()
 		if err == nil {
-			return &S7CpuInfo{
+			return &pb.S7CpuInfo{
 				ModuleTypeName: info.ModuleTypeName,
 				SerialNumber:   info.SerialNumber,
 				AsName:         info.ASName,
@@ -34,7 +36,7 @@ func (s *PlcServer) GetCpuInfo(ctx context.Context, req *Plc) (*S7CpuInfo, error
 		return nil, err
 	}
 }
-func (s *PlcServer) ReadTags(ctx context.Context, req *RWReq) (*RWResult, error) {
+func (s *PlcServer) ReadTags(ctx context.Context, req *pb.RWReq) (*pb.RWResult, error) {
 	handler := gos7.NewTCPClientHandler(req.GetPlc().GetHost(), int(req.GetPlc().GetRack()), int(req.GetPlc().GetSlot()))
 	handler.Timeout = 5 * time.Second
 	handler.IdleTimeout = 5 * time.Second
@@ -62,7 +64,7 @@ func (s *PlcServer) ReadTags(ctx context.Context, req *RWReq) (*RWResult, error)
 				}
 				ag.ReadBuffer()
 			}
-			return &RWResult{Tags: tags}, nil
+			return &pb.RWResult{Tags: tags}, nil
 		} else {
 			return nil, err
 		}
@@ -70,7 +72,7 @@ func (s *PlcServer) ReadTags(ctx context.Context, req *RWReq) (*RWResult, error)
 		return nil, err
 	}
 }
-func (s *PlcServer) WriteTags(ctx context.Context, req *RWReq) (*RWResult, error) {
+func (s *PlcServer) WriteTags(ctx context.Context, req *pb.RWReq) (*pb.RWResult, error) {
 	handler := gos7.NewTCPClientHandler(req.GetPlc().GetHost(), int(req.GetPlc().GetRack()), int(req.GetPlc().GetSlot()))
 	handler.Timeout = 5 * time.Second
 	handler.IdleTimeout = 5 * time.Second
@@ -135,7 +137,7 @@ func (s *PlcServer) WriteTags(ctx context.Context, req *RWReq) (*RWResult, error
 					}
 				}
 			}
-			return &RWResult{Tags: tags}, nil
+			return &pb.RWResult{Tags: tags}, nil
 		} else {
 			return nil, err
 		}

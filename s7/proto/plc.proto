@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package s7;
+package pb;
 
 service PlcRW {
   rpc GetCpuInfo(Plc) returns (S7CpuInfo) {}
