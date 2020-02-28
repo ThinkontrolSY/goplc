@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	pb "github.com/thinkontrolsy/goplc/s7/proto"
+	pb "github.com/thinkontrolsy/goplc/s7/plc_api"
 
 	gos7 "github.com/robinson/gos7"
 )

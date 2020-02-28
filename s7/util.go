@@ -7,7 +7,7 @@ import (
 	"strconv"
 
 	gos7 "github.com/robinson/gos7"
-	pb "github.com/thinkontrolsy/goplc/s7/proto"
+	pb "github.com/thinkontrolsy/goplc/s7/plc_api"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
 )
