@@ -2,17 +2,13 @@ syntax = "proto3";
 
 package plc_api;
 
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/duration.proto";
+
 service PlcRW {
   rpc GetCpuInfo(Plc) returns (S7CpuInfo) {}
   rpc ReadTags(RWReq) returns (RWResult) {}
   rpc WriteTags(RWReq) returns (RWResult) {}
-}
-
-enum DataType {
-  BOOL = 0;
-  INT = 1;
-  DINT = 2;
-  REAL = 3;
 }
 
 message S7CpuInfo {
@@ -26,16 +22,23 @@ message Plc {
   string host = 1;
   uint32 rack = 2;
   uint32 slot = 3;
+  uint32 port = 4;
 }
 message Tag {
   string address = 1;
-  DataType dt = 2;
+  string dt = 2;
   oneof value {
     bool value_bool = 3;
-    int32 value_int = 4;
-    float value_float = 5;
+    int32 value_int32 = 4;
+    int64 value_int64 = 5;
+    float value_float = 6;
+    double value_float64 = 7;
+    bytes value_bytes = 8;
+    string value_string = 9;
+    google.protobuf.Timestamp value_timestamp = 10;
+    google.protobuf.Duration value_duration = 11;
   }
-  string err = 6;
+  string err = 12;
 }
 
 message RWResult { repeated Tag tags = 2; }
