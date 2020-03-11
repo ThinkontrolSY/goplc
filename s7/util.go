@@ -31,7 +31,7 @@ func (t *S7AGPointer) HasBoolTag() bool {
 func (ag *S7AGPointer) FillBuffer() {
 	for _, tag := range ag.Tags {
 		if address, err := tag.GetArea(); err == nil {
-			buffer := tag.GetValueBuffer()
+			buffer := tag.FillBuffer(ag.Buffer[address.Start-ag.Start])
 			for i, b := range buffer {
 				ag.Buffer[address.Start-ag.Start+i] = b
 			}
@@ -44,7 +44,7 @@ func (ag *S7AGPointer) ReadBuffer() {
 		if address, err := tag.GetArea(); err == nil {
 			s := address.Start - ag.Start
 			d := s + address.Amount
-			tag.SetValue(ag.Buffer[s:d])
+			tag.SetTagValue(ag.Buffer[s:d])
 		}
 	}
 }

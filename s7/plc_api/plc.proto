@@ -29,16 +29,15 @@ message Tag {
   string dt = 2;
   oneof value {
     bool value_bool = 3;
-    int32 value_int32 = 4;
-    int64 value_int64 = 5;
-    float value_float = 6;
-    double value_float64 = 7;
-    bytes value_bytes = 8;
-    string value_string = 9;
-    google.protobuf.Timestamp value_timestamp = 10;
-    google.protobuf.Duration value_duration = 11;
+    int64 value_integer = 4;
+    uint64 value_uinteger = 5;
+    double value_double = 6;
+    bytes value_bytes = 7;
+    string value_string = 8;
+    google.protobuf.Timestamp value_timestamp = 9;
+    google.protobuf.Duration value_duration = 10;
   }
-  string err = 12;
+  string err = 11;
 }
 
 message RWResult { repeated Tag tags = 2; }
