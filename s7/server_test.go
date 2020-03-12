@@ -37,9 +37,13 @@ func TestWriteTags(t *testing.T) {
 	}
 
 	now := time.Now()
-	du, _ := time.ParseDuration("3h50ms")
+	du, _ := time.ParseDuration("1h50ms")
 	ts, _ := ptypes.TimestampProto(now)
 	dup := ptypes.DurationProto(du)
+
+	t.Log("//////////////////////////////////////")
+	t.Log(now)
+	t.Log(du)
 
 	tags := []*pb.Tag{
 		&pb.Tag{

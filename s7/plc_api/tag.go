@@ -2,6 +2,7 @@ package plc_api
 
 import (
 	"fmt"
+	"log"
 	"regexp"
 	"strconv"
 	"time"
@@ -14,9 +15,8 @@ import (
 )
 
 const (
-	DT_REG        = `^String\[(\d+)\]$`
-	ADD_REG       = `^(M|I|Q|(?:DB(\d+)))P(\d+)(?:\.([0-7]))?$`
-	bias    int64 = 621355968000000000 // "decimicros" between 0001-01-01 00:00:00 and 1970-01-01 00:00:00
+	DT_REG  = `^String\[(\d+)\]$`
+	ADD_REG = `^(M|I|Q|(?:DB(\d+)))P(\d+)(?:\.([0-7]))?$`
 )
 
 var DT = map[string]int{
@@ -220,7 +220,8 @@ func (tag *Tag) FillBuffer(b byte) []byte {
 			// helper.SetDateAt(buffer, 0, v)
 			v, _ := ptypes.Timestamp(tag.GetValueTimestamp())
 			initDate := time.Date(1900, time.Month(1), 1, 0, 0, 0, 0, time.UTC)
-			helper.SetValueAt(buffer, 0, int16(v.YearDay()-initDate.YearDay()))
+			days := int16(v.Sub(initDate).Hours()) / 24
+			helper.SetValueAt(buffer, 0, days)
 		}
 	case "Date_And_Time":
 		{
@@ -281,6 +282,7 @@ func (tag *Tag) FillBuffer(b byte) []byte {
 				buffer[1] = encodeBcd(int(ms) / 10000 % 100)
 				buffer[0] = encodeBcd(int(ms)/10000/100)&^0b11000000 | 0b00110000
 			}
+			log.Printf("S5Time: byte0: %08b | byte1: %08b", buffer[0], buffer[1])
 		}
 	case "Time":
 		{
