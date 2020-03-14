@@ -219,8 +219,9 @@ func (tag *Tag) FillBuffer(b byte) []byte {
 			// v, _ := ptypes.Timestamp(tag.GetValueTimestamp())
 			// helper.SetDateAt(buffer, 0, v)
 			v, _ := ptypes.Timestamp(tag.GetValueTimestamp())
-			initDate := time.Date(1900, time.Month(1), 1, 0, 0, 0, 0, time.UTC)
-			days := int16(v.Sub(initDate).Hours()) / 24
+			initDate := time.Date(1990, time.Month(1), 1, 0, 0, 0, 0, time.UTC)
+			hours := v.Sub(initDate).Hours()
+			days := int16(hours / 24)
 			helper.SetValueAt(buffer, 0, days)
 		}
 	case "Date_And_Time":
@@ -282,7 +283,6 @@ func (tag *Tag) FillBuffer(b byte) []byte {
 				buffer[1] = encodeBcd(int(ms) / 10000 % 100)
 				buffer[0] = encodeBcd(int(ms)/10000/100)&^0b11000000 | 0b00110000
 			}
-			log.Printf("S5Time: byte0: %08b | byte1: %08b", buffer[0], buffer[1])
 		}
 	case "Time":
 		{
@@ -303,7 +303,8 @@ func (tag *Tag) FillBuffer(b byte) []byte {
 		{
 			v := tag.GetValueString()
 			l := Min(len(v), tag.GetLength()-2)
-			buffer[0] = byte(tag.GetLength())
+			log.Printf("tag address: %v, l: %v, length: %v", tag.GetAddress(), l, tag.GetLength())
+			buffer[0] = byte(tag.GetLength() - 2)
 			buffer[1] = byte(l)
 			copy(buffer[2:2+l], []byte(v)[:l])
 		}
