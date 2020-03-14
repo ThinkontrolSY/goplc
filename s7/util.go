@@ -2,39 +2,17 @@ package s7
 
 import (
 	"fmt"
-	"regexp"
 	"sort"
-	"strconv"
 
-	gos7 "github.com/robinson/gos7"
 	pb "github.com/thinkontrolsy/goplc/s7/plc_api"
-	codes "google.golang.org/grpc/codes"
-	status "google.golang.org/grpc/status"
 )
-
-const (
-	AddressRegStr string = `^(M|I|Q|(?:DB(\d+)))(W|D|X)(\d+)(?:\.([0-7]))?$`
-)
-
-type S7TagAddress struct {
-	Area     string
-	DBNumber int
-	Start    int
-	Bit      uint
-	Amount   int
-	RawTag   *pb.Tag
-}
-
-func (t S7TagAddress) String() string {
-	return fmt.Sprintf("Area: %s | DB: %d | Start: %d | Bit: %d | Amount: %d", t.Area, t.DBNumber, t.Start, t.Bit, t.Amount)
-}
 
 type S7AGPointer struct {
 	Start    int
 	End      int
 	DBNumber int
 	Buffer   []byte
-	Tags     []*S7TagAddress
+	Tags     []*pb.Tag
 }
 
 func (t S7AGPointer) String() string {
@@ -43,7 +21,7 @@ func (t S7AGPointer) String() string {
 
 func (t *S7AGPointer) HasBoolTag() bool {
 	for _, tag := range t.Tags {
-		if tag.RawTag.Dt == pb.DataType_BOOL {
+		if tag.Dt == "Bool" {
 			return true
 		}
 	}
@@ -51,151 +29,89 @@ func (t *S7AGPointer) HasBoolTag() bool {
 }
 
 func (ag *S7AGPointer) FillBuffer() {
-	var helper gos7.Helper
-	for _, item := range ag.Tags {
-		tag := item.RawTag
-		switch tag.Dt {
-		case pb.DataType_BOOL:
-			{
-				v := tag.GetValueBool()
-				b := helper.SetBoolAt(ag.Buffer[item.Start-ag.Start], item.Bit, v)
-				ag.Buffer[item.Start-ag.Start] = b
-			}
-		case pb.DataType_DINT:
-			{
-				v := tag.GetValueInt()
-				helper.SetValueAt(ag.Buffer, item.Start-ag.Start, v)
-			}
-		case pb.DataType_INT:
-			{
-				v := int16(tag.GetValueInt())
-				helper.SetValueAt(ag.Buffer, item.Start-ag.Start, v)
-			}
-		case pb.DataType_REAL:
-			{
-				v := tag.GetValueFloat()
-				helper.SetValueAt(ag.Buffer, item.Start-ag.Start, v)
+	for _, tag := range ag.Tags {
+		if address, err := tag.GetArea(); err == nil {
+			buffer := tag.FillBuffer(ag.Buffer[address.Start-ag.Start])
+			for i, b := range buffer {
+				ag.Buffer[address.Start-ag.Start+i] = b
 			}
 		}
 	}
 }
 
 func (ag *S7AGPointer) ReadBuffer() {
-	var helper gos7.Helper
-	for _, item := range ag.Tags {
-		tag := item.RawTag
-		switch tag.Dt {
-		case pb.DataType_BOOL:
-			{
-				tag.Value = &pb.Tag_ValueBool{ValueBool: helper.GetBoolAt(ag.Buffer[item.Start-ag.Start], item.Bit)}
-			}
-		case pb.DataType_DINT:
-			{
-				var r int32
-				helper.GetValueAt(ag.Buffer, item.Start-ag.Start, &r)
-				tag.Value = &pb.Tag_ValueInt{ValueInt: r}
-			}
-		case pb.DataType_INT:
-			{
-				var r int16
-				helper.GetValueAt(ag.Buffer, item.Start-ag.Start, &r)
-				tag.Value = &pb.Tag_ValueInt{ValueInt: int32(r)}
-			}
-		case pb.DataType_REAL:
-			{
-				var r float32
-				helper.GetValueAt(ag.Buffer, item.Start-ag.Start, &r)
-				tag.Value = &pb.Tag_ValueFloat{ValueFloat: r}
-			}
+	for _, tag := range ag.Tags {
+		if address, err := tag.GetArea(); err == nil {
+			s := address.Start - ag.Start
+			d := s + address.Amount
+			tag.SetTagValue(ag.Buffer[s:d])
 		}
 	}
 }
 
-func tagsConvert(tags []*pb.Tag) ([]*S7TagAddress, error) {
-	addReg, _ := regexp.Compile(AddressRegStr)
-	var items []*S7TagAddress
-	for _, tag := range tags {
-		match := addReg.FindStringSubmatch(tag.GetAddress())
-		if match == nil {
-			return nil, status.Errorf(codes.Unavailable, fmt.Sprintf("Address format error: %v", tag.GetAddress()))
-		}
-		var start, amount int
-		bit, _ := strconv.Atoi(match[5])
-		dbNum, _ := strconv.Atoi(match[2])
-		switch match[3] {
-		case "W":
-			amount = 2
-		case "D":
-			amount = 4
-		default:
-			amount = 1
-		}
-		start, _ = strconv.Atoi(match[4])
-		items = append(items, &S7TagAddress{
-			Area:     match[1],
-			DBNumber: dbNum,
-			Start:    start,
-			Amount:   amount,
-			Bit:      uint(bit),
-			RawTag:   tag,
-		})
-	}
-	return items, nil
-}
-
-func generateAGMap(tags []*S7TagAddress) map[string]*S7AGPointer {
+func generateAGMap(tags []*pb.Tag) map[string]*S7AGPointer {
 	m := make(map[string]*S7AGPointer)
 	for _, tag := range tags {
-		d, ok := m[tag.Area]
-		if ok {
-			if tag.Start < d.Start {
-				d.Start = tag.Start
-			}
-			if tag.Start+tag.Amount > d.End {
-				d.End = tag.Start + tag.Amount
-			}
-			d.Tags = append(d.Tags, tag)
-		} else {
-			m[tag.Area] = &S7AGPointer{
-				Start:    tag.Start,
-				End:      tag.Start + tag.Amount,
-				DBNumber: tag.DBNumber,
-				Tags:     []*S7TagAddress{tag},
+		if address, err := tag.GetArea(); err == nil {
+			d, ok := m[address.Area]
+			if ok {
+				if address.Start < d.Start {
+					d.Start = address.Start
+				}
+				if address.Start+address.Amount > d.End {
+					d.End = address.Start + address.Amount
+				}
+				d.Tags = append(d.Tags, tag)
+			} else {
+				m[address.Area] = &S7AGPointer{
+					Start:    address.Start,
+					End:      address.Start + address.Amount,
+					DBNumber: address.DBNumber,
+					Tags:     []*pb.Tag{tag},
+				}
 			}
 		}
+
 	}
 	return m
 }
 
-func generateAGGroupMap(tags []*S7TagAddress) map[string][]*S7AGPointer {
-	groupList := make(map[string][]*S7TagAddress)
+func generateAGGroupMap(tags []*pb.Tag) map[string][]*S7AGPointer {
+	groupList := make(map[string][]*pb.Tag)
 	for _, tag := range tags {
-		groupList[tag.Area] = append(groupList[tag.Area], tag)
+		if address, err := tag.GetArea(); err == nil {
+			groupList[address.Area] = append(groupList[address.Area], tag)
+		}
 	}
 	m := make(map[string][]*S7AGPointer)
 	for area, tags := range groupList {
-		sort.Slice(tags, func(i, j int) bool { return tags[i].Start < tags[j].Start })
+		sort.Slice(tags, func(i, j int) bool {
+			add_i, _ := tags[i].GetArea()
+			add_j, _ := tags[j].GetArea()
+			return add_i.Start < add_j.Start
+		})
 		var ags []*S7AGPointer
 		for _, tag := range tags {
+			address, _ := tag.GetArea()
 			if len(ags) == 0 {
 				ags = append(ags, &S7AGPointer{
-					Start:    tag.Start,
-					End:      tag.Start + tag.Amount,
-					DBNumber: tag.DBNumber,
-					Tags:     []*S7TagAddress{tag},
+					Start:    address.Start,
+					End:      address.Start + address.Amount,
+					DBNumber: address.DBNumber,
+					Tags:     []*pb.Tag{tag},
 				})
 			} else {
 				ag := ags[len(ags)-1]
-				if ag.End > tag.Start {
+				if ag.End > address.Start {
 					ags = append(ags, &S7AGPointer{
-						Start:    tag.Start,
-						End:      tag.Start + tag.Amount,
-						DBNumber: tag.DBNumber,
-						Tags:     []*S7TagAddress{tag},
+						Start:    address.Start,
+						End:      address.Start + address.Amount,
+						DBNumber: address.DBNumber,
+						Tags:     []*pb.Tag{tag},
 					})
 				} else {
-					if tag.Start+tag.Amount > ag.End {
-						ag.End = tag.Start + tag.Amount
+					if address.Start+address.Amount > ag.End {
+						ag.End = address.Start + address.Amount
 					}
 					ag.Tags = append(ag.Tags, tag)
 				}
