@@ -38,15 +38,6 @@ message Tag {
   }
   string err = 11;
 }
-message PlcCon {
-  map<string, Tag> tags = 1;
-}
-message Model {
-  // Use tag in here, address is an express like PLC1.current in equipment tag slot
-  map<string, Tag> equipments = 1;
-  map<string, PlcCon> plcs = 2;
-}
-
 
 message RWResult { repeated Tag tags = 2; }
 
