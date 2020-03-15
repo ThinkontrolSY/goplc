@@ -10,7 +10,6 @@ service PlcRW {
   rpc ReadTags(RWReq) returns (RWResult) {}
   rpc WriteTags(RWReq) returns (RWResult) {}
 }
-
 message S7CpuInfo {
   string module_type_name = 1;
   string serial_number = 2;
@@ -39,6 +38,15 @@ message Tag {
   }
   string err = 11;
 }
+message PlcCon {
+  map<string, Tag> tags = 1;
+}
+message Model {
+  // Use tag in here, address is an express like PLC1.current in equipment tag slot
+  map<string, Tag> equipments = 1;
+  map<string, PlcCon> plcs = 2;
+}
+
 
 message RWResult { repeated Tag tags = 2; }
 
