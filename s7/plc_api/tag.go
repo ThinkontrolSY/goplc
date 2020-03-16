@@ -11,7 +11,7 @@ import (
 	"github.com/golang/protobuf/ptypes/timestamp"
 
 	ptypes "github.com/golang/protobuf/ptypes"
-	gos7 "github.com/robinson/gos7"
+	gos7 "github.com/thinkontrolsy/gos7"
 )
 
 const (
@@ -203,53 +203,55 @@ func (tag *Tag) FillBuffer(b byte) []byte {
 	case "DTL":
 		{
 			v, _ := ptypes.Timestamp(tag.GetValueTimestamp())
-			year := uint16(v.Year())
-			helper.SetValueAt(buffer, 0, year)
-			buffer[2] = byte(v.Month())
-			buffer[3] = byte(v.Day())
-			buffer[4] = byte(v.Weekday())
-			buffer[5] = byte(v.Hour())
-			buffer[6] = byte(v.Minute())
-			buffer[7] = byte(v.Second())
-			nanos := int32(v.Nanosecond())
-			helper.SetValueAt(buffer, 8, nanos)
+			helper.SetDTLAt(buffer, 0)
+			// v, _ := ptypes.Timestamp(tag.GetValueTimestamp())
+			// year := uint16(v.Year())
+			// helper.SetValueAt(buffer, 0, year)
+			// buffer[2] = byte(v.Month())
+			// buffer[3] = byte(v.Day())
+			// buffer[4] = byte(v.Weekday())
+			// buffer[5] = byte(v.Hour())
+			// buffer[6] = byte(v.Minute())
+			// buffer[7] = byte(v.Second())
+			// nanos := int32(v.Nanosecond())
+			// helper.SetValueAt(buffer, 8, nanos)
 		}
 	case "Date":
 		{
-			// v, _ := ptypes.Timestamp(tag.GetValueTimestamp())
-			// helper.SetDateAt(buffer, 0, v)
 			v, _ := ptypes.Timestamp(tag.GetValueTimestamp())
-			initDate := time.Date(1990, time.Month(1), 1, 0, 0, 0, 0, time.UTC)
-			hours := v.Sub(initDate).Hours()
-			days := int16(hours / 24)
-			helper.SetValueAt(buffer, 0, days)
+			helper.SetDateAt(buffer, 0, v)
+			// v, _ := ptypes.Timestamp(tag.GetValueTimestamp())
+			// initDate := time.Date(1990, time.Month(1), 1, 0, 0, 0, 0, time.UTC)
+			// hours := v.Sub(initDate).Hours()
+			// days := int16(hours / 24)
+			// helper.SetValueAt(buffer, 0, days)
 		}
 	case "Date_And_Time":
 		{
-			// v, _ := ptypes.Timestamp(tag.GetValueTimestamp())
-			// helper.SetDTLAt(buffer, 0, v)
 			v, _ := ptypes.Timestamp(tag.GetValueTimestamp())
-			year := v.Year()
-			if year >= 2000 {
-				year -= 2000
-			} else {
-				year -= 1990
-			}
-			buffer[0] = encodeBcd(year)
-			buffer[1] = encodeBcd(int(v.Month()))
-			buffer[2] = encodeBcd(v.Day())
-			buffer[3] = encodeBcd(v.Hour())
-			buffer[4] = encodeBcd(v.Minute())
-			buffer[5] = encodeBcd(v.Second())
-			buffer[6] = encodeBcd(v.Nanosecond() / 1000000 / 10)
-			buffer[7] = (encodeBcd(v.Nanosecond()/1000000%10) << 4) | encodeBcd(int(v.Weekday()))
+			helper.SetDateTimeAt(buffer, 0, v)
+			// v, _ := ptypes.Timestamp(tag.GetValueTimestamp())
+			// year := v.Year()
+			// if year >= 2000 {
+			// 	year -= 2000
+			// } else {
+			// 	year -= 1900
+			// }
+			// buffer[0] = encodeBcd(year)
+			// buffer[1] = encodeBcd(int(v.Month()))
+			// buffer[2] = encodeBcd(v.Day())
+			// buffer[3] = encodeBcd(v.Hour())
+			// buffer[4] = encodeBcd(v.Minute())
+			// buffer[5] = encodeBcd(v.Second())
+			// buffer[6] = encodeBcd(v.Nanosecond() / 1000000 / 10)
+			// buffer[7] = (encodeBcd(v.Nanosecond()/1000000%10) << 4) | encodeBcd(int(v.Weekday()))
 		}
 	case "LDT":
 		{
-			// v, _ := ptypes.Timestamp(tag.GetValueTimestamp())
-			// helper.SetLDTAt(buffer, 0, v)
 			v, _ := ptypes.Timestamp(tag.GetValueTimestamp())
-			helper.SetValueAt(buffer, 0, v.UnixNano())
+			helper.SetLDTAt(buffer, 0, v)
+			// v, _ := ptypes.Timestamp(tag.GetValueTimestamp())
+			// helper.SetValueAt(buffer, 0, v.UnixNano())
 		}
 	case "LTime":
 		{
@@ -259,30 +261,31 @@ func (tag *Tag) FillBuffer(b byte) []byte {
 		}
 	case "LTime_Of_Day":
 		{
-			// v, _ := ptypes.Timestamp(tag.GetValueTimestamp())
-			// helper.SetLTODAt(buffer, 0, v)
-			t, _ := ptypes.Timestamp(tag.GetValueTimestamp())
-			v := int64((t.Hour()*3600 + t.Minute()*60 + t.Second()) * 1000000000)
-			helper.SetValueAt(buffer, 0, v)
+			v, _ := ptypes.Timestamp(tag.GetValueTimestamp())
+			helper.SetLTODAt(buffer, 0, v)
+			// t, _ := ptypes.Timestamp(tag.GetValueTimestamp())
+			// v := int64((t.Hour()*3600 + t.Minute()*60 + t.Second()) * 1000000000)
+			// helper.SetValueAt(buffer, 0, v)
 		}
 	case "S5Time":
 		{
 			v, _ := ptypes.Duration(tag.GetValueDuration())
-			ms := v.Milliseconds()
-			switch {
-			case ms < 9990:
-				buffer[1] = encodeBcd(int(ms) / 10 % 100)
-				buffer[0] = encodeBcd(int(ms)/10/100) &^ 0b11110000
-			case ms > 100 && ms < 99900:
-				buffer[1] = encodeBcd(int(ms) / 100 % 100)
-				buffer[0] = encodeBcd(int(ms)/100/100)&^0b11100000 | 0b00010000
-			case ms > 1000 && ms < 999000:
-				buffer[1] = encodeBcd(int(ms) / 1000 % 100)
-				buffer[0] = encodeBcd(int(ms)/1000/100)&^0b11010000 | 0b00100000
-			case ms > 10000 && ms < 9990000:
-				buffer[1] = encodeBcd(int(ms) / 10000 % 100)
-				buffer[0] = encodeBcd(int(ms)/10000/100)&^0b11000000 | 0b00110000
-			}
+			helper.SetS5TimeAt(buffer, 0)
+			// ms := v.Milliseconds()
+			// switch {
+			// case ms < 9990:
+			// 	buffer[1] = encodeBcd(int(ms) / 10 % 100)
+			// 	buffer[0] = encodeBcd(int(ms)/10/100) &^ 0b11110000
+			// case ms > 100 && ms < 99900:
+			// 	buffer[1] = encodeBcd(int(ms) / 100 % 100)
+			// 	buffer[0] = encodeBcd(int(ms)/100/100)&^0b11100000 | 0b00010000
+			// case ms > 1000 && ms < 999000:
+			// 	buffer[1] = encodeBcd(int(ms) / 1000 % 100)
+			// 	buffer[0] = encodeBcd(int(ms)/1000/100)&^0b11010000 | 0b00100000
+			// case ms > 10000 && ms < 9990000:
+			// 	buffer[1] = encodeBcd(int(ms) / 10000 % 100)
+			// 	buffer[0] = encodeBcd(int(ms)/10000/100)&^0b11000000 | 0b00110000
+			// }
 		}
 	case "Time":
 		{
@@ -292,11 +295,11 @@ func (tag *Tag) FillBuffer(b byte) []byte {
 		}
 	case "Time_Of_Day":
 		{
-			// v, _ := ptypes.Timestamp(tag.GetValueTimestamp())
-			// helper.SetTODAt(buffer, 0, v)
-			t, _ := ptypes.Timestamp(tag.GetValueTimestamp())
-			v := int32((t.Hour()*3600 + t.Minute()*60 + t.Second()) * 1000)
-			helper.SetValueAt(buffer, 0, v)
+			v, _ := ptypes.Timestamp(tag.GetValueTimestamp())
+			helper.SetTODAt(buffer, 0, v)
+			// t, _ := ptypes.Timestamp(tag.GetValueTimestamp())
+			// v := int32((t.Hour()*3600 + t.Minute()*60 + t.Second()) * 1000)
+			// helper.SetValueAt(buffer, 0, v)
 		}
 	// String or String[n]
 	default:
@@ -393,75 +396,78 @@ func (tag *Tag) SetTagValue(buffer []byte) {
 		}
 	case "DTL":
 		{
-			var year uint16
-			var nanos int32
-			helper.GetValueAt(buffer, 0, &year)
-			helper.GetValueAt(buffer, 8, &nanos)
-			v, _ := ptypes.TimestampProto(time.Date(int(year), time.Month(int(buffer[2])), int(buffer[3]), int(buffer[5]), int(buffer[6]), int(buffer[7]), int(nanos), time.UTC))
+			v, _ := ptypes.TimestampProto(helper.GetDTLAt(buffer, 0))
 			tag.Value = &Tag_ValueTimestamp{ValueTimestamp: v}
+			// var year uint16
+			// var nanos int32
+			// helper.GetValueAt(buffer, 0, &year)
+			// helper.GetValueAt(buffer, 8, &nanos)
+			// v, _ := ptypes.TimestampProto(time.Date(int(year), time.Month(int(buffer[2])), int(buffer[3]), int(buffer[5]), int(buffer[6]), int(buffer[7]), int(nanos), time.UTC))
+			// tag.Value = &Tag_ValueTimestamp{ValueTimestamp: v}
 		}
 	case "Date":
 		{
-			// v, _ := ptypes.TimestampProto(helper.GetDateAt(buffer, 0))
-			// tag.Value = &Tag_ValueTimestamp{ValueTimestamp: v}
-			initDate := time.Date(1990, time.Month(1), 1, 0, 0, 0, 0, time.UTC)
-			var span int16
-			helper.GetValueAt(buffer, 0, &span)
-			t := initDate.AddDate(0, 0, int(span))
-			v, _ := ptypes.TimestampProto(t)
+			v, _ := ptypes.TimestampProto(helper.GetDateAt(buffer, 0))
 			tag.Value = &Tag_ValueTimestamp{ValueTimestamp: v}
+			// initDate := time.Date(1990, time.Month(1), 1, 0, 0, 0, 0, time.UTC)
+			// var span int16
+			// helper.GetValueAt(buffer, 0, &span)
+			// t := initDate.AddDate(0, 0, int(span))
+			// v, _ := ptypes.TimestampProto(t)
+			// tag.Value = &Tag_ValueTimestamp{ValueTimestamp: v}
 		}
 	case "Date_And_Time":
 		{
-			// v, _ := ptypes.TimestampProto(helper.GetDTLAt(buffer, 0))
-			// tag.Value = &Tag_ValueTimestamp{ValueTimestamp: v}
-			year := decodeBcd(buffer[0])
-			if year >= 90 {
-				year += 1900
-			} else {
-				year += 2000
-			}
-			month := decodeBcd(buffer[1])
-			day := decodeBcd(buffer[2])
-			hour := decodeBcd(buffer[3])
-			minute := decodeBcd(buffer[4])
-			second := decodeBcd(buffer[5])
-			ms := decodeBcd(buffer[6])*10 + decodeBcd(buffer[7]>>4)
-			v, _ := ptypes.TimestampProto(time.Date(int(year), time.Month(month), day, hour, minute, second, ms*1000000, time.UTC))
+			v, _ := ptypes.TimestampProto(helper.GetDateTimeAt(buffer, 0))
 			tag.Value = &Tag_ValueTimestamp{ValueTimestamp: v}
+			// year := decodeBcd(buffer[0])
+			// if year >= 90 {
+			// 	year += 1900
+			// } else {
+			// 	year += 2000
+			// }
+			// month := decodeBcd(buffer[1])
+			// day := decodeBcd(buffer[2])
+			// hour := decodeBcd(buffer[3])
+			// minute := decodeBcd(buffer[4])
+			// second := decodeBcd(buffer[5])
+			// ms := decodeBcd(buffer[6])*10 + decodeBcd(buffer[7]>>4)
+			// v, _ := ptypes.TimestampProto(time.Date(int(year), time.Month(month), day, hour, minute, second, ms*1000000, time.UTC))
+			// tag.Value = &Tag_ValueTimestamp{ValueTimestamp: v}
 		}
 	case "LDT":
 		{
-			// v, _ := ptypes.TimestampProto(helper.GetLDTAt(buffer, 0))
-			// tag.Value = &Tag_ValueTimestamp{ValueTimestamp: v}
-			var nano int64
-			helper.GetValueAt(buffer, 0, &nano)
-			v, _ := ptypes.TimestampProto(time.Date(1970, time.Month(1), 1, 0, 0, 0, int(nano), time.UTC))
+			v, _ := ptypes.TimestampProto(helper.GetLDTAt(buffer, 0))
 			tag.Value = &Tag_ValueTimestamp{ValueTimestamp: v}
+			// var nano int64
+			// helper.GetValueAt(buffer, 0, &nano)
+			// v, _ := ptypes.TimestampProto(time.Date(1970, time.Month(1), 1, 0, 0, 0, int(nano), time.UTC))
+			// tag.Value = &Tag_ValueTimestamp{ValueTimestamp: v}
 		}
 	case "LTime_Of_Day":
 		{
-			// v, _ := ptypes.TimestampProto(helper.GetLTODAt(buffer, 0))
-			// tag.Value = &Tag_ValueTimestamp{ValueTimestamp: v}
-			var nano int64
-			helper.GetValueAt(buffer, 0, &nano)
-			v, _ := ptypes.TimestampProto(time.Date(1970, time.Month(1), 1, 0, 0, 0, int(nano), time.UTC))
+			v, _ := ptypes.TimestampProto(helper.GetLTODAt(buffer, 0))
 			tag.Value = &Tag_ValueTimestamp{ValueTimestamp: v}
+			// var nano int64
+			// helper.GetValueAt(buffer, 0, &nano)
+			// v, _ := ptypes.TimestampProto(time.Date(1970, time.Month(1), 1, 0, 0, 0, int(nano), time.UTC))
+			// tag.Value = &Tag_ValueTimestamp{ValueTimestamp: v}
 		}
 	case "S5Time":
 		{
-			t := decodeBcd(buffer[0]&0b00001111)*100 + decodeBcd(buffer[1])
-			switch buffer[0] & 0b00110000 {
-			case 0b00000000:
-				t *= 10
-			case 0b00010000:
-				t *= 100
-			case 0b00100000:
-				t *= 1000
-			case 0b00110000:
-				t *= 10000
-			}
-			d, _ := time.ParseDuration(fmt.Sprintf("%dms", t))
+			// t := decodeBcd(buffer[0]&0b00001111)*100 + decodeBcd(buffer[1])
+			// switch buffer[0] & 0b00110000 {
+			// case 0b00000000:
+			// 	t *= 10
+			// case 0b00010000:
+			// 	t *= 100
+			// case 0b00100000:
+			// 	t *= 1000
+			// case 0b00110000:
+			// 	t *= 10000
+			// }
+			// d, _ := time.ParseDuration(fmt.Sprintf("%dms", t))
+			d := helper.GetS5TimeAt(buffer, 0)
 			tag.Value = &Tag_ValueDuration{ValueDuration: ptypes.DurationProto(d)}
 		}
 	case "Time":
@@ -480,12 +486,12 @@ func (tag *Tag) SetTagValue(buffer []byte) {
 		}
 	case "Time_Of_Day":
 		{
-			// v, _ := ptypes.TimestampProto(helper.GetTODAt(buffer, 0))
-			// tag.Value = &Tag_ValueTimestamp{ValueTimestamp: v}
-			var ms int32
-			helper.GetValueAt(buffer, 0, &ms)
-			v, _ := ptypes.TimestampProto(time.Date(1970, time.Month(1), 1, 0, 0, 0, int(ms)*1000000, time.UTC))
+			v, _ := ptypes.TimestampProto(helper.GetTODAt(buffer, 0))
 			tag.Value = &Tag_ValueTimestamp{ValueTimestamp: v}
+			// var ms int32
+			// helper.GetValueAt(buffer, 0, &ms)
+			// v, _ := ptypes.TimestampProto(time.Date(1970, time.Month(1), 1, 0, 0, 0, int(ms)*1000000, time.UTC))
+			// tag.Value = &Tag_ValueTimestamp{ValueTimestamp: v}
 		}
 	// String or String[n]
 	default:
