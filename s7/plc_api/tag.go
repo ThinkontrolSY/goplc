@@ -203,7 +203,7 @@ func (tag *Tag) FillBuffer(b byte) []byte {
 	case "DTL":
 		{
 			v, _ := ptypes.Timestamp(tag.GetValueTimestamp())
-			helper.SetDTLAt(buffer, 0)
+			helper.SetDTLAt(buffer, 0, v)
 			// v, _ := ptypes.Timestamp(tag.GetValueTimestamp())
 			// year := uint16(v.Year())
 			// helper.SetValueAt(buffer, 0, year)
@@ -270,7 +270,7 @@ func (tag *Tag) FillBuffer(b byte) []byte {
 	case "S5Time":
 		{
 			v, _ := ptypes.Duration(tag.GetValueDuration())
-			helper.SetS5TimeAt(buffer, 0)
+			helper.SetS5TimeAt(buffer, 0, v)
 			// ms := v.Milliseconds()
 			// switch {
 			// case ms < 9990:
