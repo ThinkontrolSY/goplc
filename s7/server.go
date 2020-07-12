@@ -6,7 +6,7 @@ import (
 
 	pb "github.com/thinkontrolsy/goplc/s7/plc_api"
 
-	gos7 "github.com/thinkontrolsy/gos7"
+	gos7 "github.com/robinson/gos7"
 )
 
 type PlcServer struct {

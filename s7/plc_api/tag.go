@@ -11,7 +11,7 @@ import (
 	"github.com/golang/protobuf/ptypes/timestamp"
 
 	ptypes "github.com/golang/protobuf/ptypes"
-	gos7 "github.com/thinkontrolsy/gos7"
+	gos7 "github.com/robinson/gos7"
 )
 
 const (
